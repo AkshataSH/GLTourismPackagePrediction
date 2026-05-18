@@ -38,10 +38,10 @@ ytrain_path = f"hf://datasets/{repo_id}/ytrain.csv"
 ytest_path = f"hf://datasets/{repo_id}/ytest.csv"
 
 print("Loading preprocessed data...")
-Xtrain = pd.read_csv(Xtrain_path)
-Xtest = pd.read_csv(Xtest_path)
-ytrain = pd.read_csv(ytrain_path).values.ravel()
-ytest = pd.read_csv(ytest_path).values.ravel()
+X_train = pd.read_csv(Xtrain_path)
+X_test = pd.read_csv(Xtest_path)
+y_train = pd.read_csv(ytrain_path).values.ravel()
+y_test = pd.read_csv(ytest_path).values.ravel()
 
 print(f"Training set shape: {X_train.shape}")
 print(f"Test set shape: {X_test.shape}")
@@ -84,7 +84,7 @@ with mlflow.start_run():
         scoring='roc_auc',
         verbose=1
     )
-    
+
     grid_search.fit(X_train, y_train)
 
     # Log parameter sets
@@ -108,7 +108,7 @@ with mlflow.start_run():
     print("\nMaking predictions...")
     y_pred_train = best_model.predict(X_train)
     y_pred_test = best_model.predict(X_test)
-    
+
     # Probability predictions
     y_pred_train_proba = best_model.predict_proba(X_train)[:, 1]
     y_pred_test_proba = best_model.predict_proba(X_test)[:, 1]
@@ -191,4 +191,6 @@ with mlflow.start_run():
 print("\n" + "="*50)
 print("MODEL TRAINING COMPLETED SUCCESSFULLY!")
 print("="*50)
+
+
 
