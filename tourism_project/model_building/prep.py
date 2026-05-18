@@ -3,6 +3,7 @@ import pandas as pd
 import sklearn
 # for creating a folder
 import os
+from pathlib import Path
 # for data preprocessing and pipeline creation
 from sklearn.model_selection import train_test_split
 # for converting text data in to numerical representation
@@ -49,8 +50,8 @@ print(df.nunique()) #Unnamed and Customer ID have unique values. Unnamed is an i
 df.drop(columns=['Unnamed: 0', 'CustomerID'], inplace=True)
 print("\nShape of the dataset after dropping unique identifier columns:", df.shape)
 
-# Handle specific data quality issues (e.g., "Fe Male" should be "Female")df["Gender"] 
-df["Gender"].astype(str).str.strip().replace({"Fe Male": "Female", "Fe male": "Female"})
+# Handle specific data quality issues (e.g., "Fe Male" should be "Female")
+df["Gender"] = df["Gender"].astype(str).str.strip().replace({"Fe Male": "Female", "Fe male": "Female"})
 
 # Data Cleaning and Feature Engineering
 # Handle missing values - for simplicity, fill with appropriate values
@@ -76,13 +77,13 @@ print(f"Target shape: {y.shape}")
 print(f"Target distribution:\n{y.value_counts()}")
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-print(f"\nTrain set size: {Xtrain.shape[0]}")
-print(f"Test set size: {Xtest.shape[0]}")
+print(f"\nTrain set size: {X_train.shape[0]}")
+print(f"Test set size: {X_test.shape[0]}")
 
-Xtrain.to_csv("Xtrain.csv",index=False)
-Xtest.to_csv("Xtest.csv",index=False)
-ytrain.to_csv("ytrain.csv",index=False)
-ytest.to_csv("ytest.csv",index=False)
+X_train.to_csv("Xtrain.csv", index=False)
+X_test.to_csv("Xtest.csv", index=False)
+y_train.to_csv("ytrain.csv", index=False)
+y_test.to_csv("ytest.csv", index=False)
 
 files = ["Xtrain.csv","Xtest.csv","ytrain.csv","ytest.csv"]
 
