@@ -64,12 +64,12 @@ xgb_model = xgb.XGBClassifier(random_state=42,
 
 # Define hyperparameter grid
 param_grid = {
-    'xgbclassifier__n_estimators': [100, 200, 300],
-    'xgbclassifier__max_depth': [2, 3, 5, 7],
-    'xgbclassifier__learning_rate': [0.01, 0.05, 0.1],
-    'xgbclassifier__subsample': [0.7, 0.8, 1.0],
-    'xgbclassifier__colsample_bytree': [0.7, 0.8, 1.0],
-    'xgbclassifier__scale_pos_weight': [1, 2, 3]  # Handle class imbalance
+    'xgbclassifier__n_estimators': [100, 200],
+    'xgbclassifier__max_depth': [2, 3],
+    'xgbclassifier__learning_rate': [0.05, 0.1],
+    'xgbclassifier__subsample': [0.5],
+    'xgbclassifier__colsample_bytree': [0.5], 
+    'xgbclassifier__reg_lambda': [0.5]  
 }
 
 # Create pipeline
@@ -81,9 +81,8 @@ with mlflow.start_run():
     grid_search = GridSearchCV(
         model_pipeline, 
         param_grid, 
-        cv=3, 
+        cv=5, 
         n_jobs=-1, 
-        scoring='roc_auc',
         verbose=1
     )
 
@@ -195,6 +194,3 @@ with mlflow.start_run():
 print("\n" + "="*50)
 print("MODEL TRAINING COMPLETED SUCCESSFULLY!")
 print("="*50)
-
-
-
