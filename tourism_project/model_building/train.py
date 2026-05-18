@@ -162,6 +162,8 @@ with mlflow.start_run():
 
     print("\nTest Set Confusion Matrix:")
     print(confusion_matrix(y_test, y_pred_test))
+
+    model_path = "best_tourism_model_v1.joblib"
     joblib.dump(best_model, model_path)
     print(f"\nModel saved locally as: {model_path}")
 
