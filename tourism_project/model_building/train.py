@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 # Preprocessing & pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler,OneHotEncoder
 from sklearn.compose import make_column_transformer
 from sklearn.pipeline import make_pipeline
 
