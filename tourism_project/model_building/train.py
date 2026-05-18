@@ -9,10 +9,11 @@ from sklearn.pipeline import make_pipeline
 
 # Model training & evaluation
 import xgboost as xgb
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
-    f1_score, roc_auc_score, classification_report, confusion_matrix
+    f1_score, roc_auc_score, classification_report, confusion_matrix,
+    precision_recall_curve
 )
 
 # Serialization & system
@@ -45,6 +46,8 @@ y_test = pd.read_csv(ytest_path).values.ravel()
 
 print(f"Training set shape: {X_train.shape}")
 print(f"Test set shape: {X_test.shape}")
+print("Training target distribution:")
+print(pd.Series(y_train).value_counts())
 
 # Automatically detect columns
 numeric_features = X_train.select_dtypes(include=["int64", "float64"]).columns.tolist()
@@ -62,14 +65,20 @@ preprocessor = make_column_transformer(
 xgb_model = xgb.XGBClassifier(random_state=42,
     eval_metric='logloss')
 
+negative_count = (y_train == 0).sum()
+positive_count = (y_train == 1).sum()
+scale_pos_weight = round(negative_count / positive_count, 2)
+print(f"Calculated scale_pos_weight: {scale_pos_weight}")
+
 # Define hyperparameter grid
 param_grid = {
-    'xgbclassifier__n_estimators': [100, 200],
-    'xgbclassifier__max_depth': [2, 3],
-    'xgbclassifier__learning_rate': [0.05, 0.1],
-    'xgbclassifier__subsample': [0.5],
-    'xgbclassifier__colsample_bytree': [0.5], 
-    'xgbclassifier__reg_lambda': [0.5]  
+    'xgbclassifier__n_estimators': [100, 200, 300],
+    'xgbclassifier__max_depth': [2, 3, 5],
+    'xgbclassifier__learning_rate': [0.03, 0.05, 0.1],
+    'xgbclassifier__subsample': [0.7, 0.9, 1.0],
+    'xgbclassifier__colsample_bytree': [0.7, 0.9, 1.0],
+    'xgbclassifier__reg_lambda': [0.5, 1.0, 2.0],
+    'xgbclassifier__scale_pos_weight': [1, scale_pos_weight]
 }
 
 # Create pipeline
@@ -78,11 +87,14 @@ model_pipeline = make_pipeline(preprocessor, xgb_model)
 mlflow.set_experiment("ash-tourism-package-prediction")
 with mlflow.start_run():
     print("Performing Grid Search with Cross-Validation...")
+    cv_strategy = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
     grid_search = GridSearchCV(
         model_pipeline, 
         param_grid, 
-        cv=5, 
+        cv=cv_strategy, 
         n_jobs=-1, 
+        scoring='f1',
         verbose=1
     )
 
@@ -105,14 +117,19 @@ with mlflow.start_run():
     mlflow.log_params(grid_search.best_params_)
     best_model = grid_search.best_estimator_
 
-    # Predictions
-    print("\nMaking predictions...")
-    y_pred_train = best_model.predict(X_train)
-    y_pred_test = best_model.predict(X_test)
-
     # Probability predictions
+    print("\nMaking predictions...")
     y_pred_train_proba = best_model.predict_proba(X_train)[:, 1]
     y_pred_test_proba = best_model.predict_proba(X_test)[:, 1]
+
+    precision_values, recall_values, thresholds = precision_recall_curve(y_train, y_pred_train_proba)
+    f1_values = 2 * precision_values * recall_values / (precision_values + recall_values + 1e-9)
+    best_threshold = thresholds[np.argmax(f1_values[:-1])]
+    print(f"Best probability threshold: {best_threshold:.4f}")
+    mlflow.log_metric("best_probability_threshold", best_threshold)
+
+    y_pred_train = (y_pred_train_proba >= best_threshold).astype(int)
+    y_pred_test = (y_pred_test_proba >= best_threshold).astype(int)
 
     # Calculate metrics
     print("\nCalculating metrics...")
@@ -142,7 +159,8 @@ with mlflow.start_run():
         "train_f1_score": train_f1,
         "test_f1_score": test_f1,
         "train_roc_auc": train_roc_auc,
-        "test_roc_auc": test_roc_auc
+        "test_roc_auc": test_roc_auc,
+        "probability_threshold": best_threshold
     })
 
     # Print results
@@ -154,6 +172,7 @@ with mlflow.start_run():
     print(f"Train Recall: {train_recall:.4f} | Test Recall: {test_recall:.4f}")
     print(f"Train F1-Score: {train_f1:.4f} | Test F1-Score: {test_f1:.4f}")
     print(f"Train ROC-AUC: {train_roc_auc:.4f} | Test ROC-AUC: {test_roc_auc:.4f}")
+    print(f"Probability Threshold: {best_threshold:.4f}")
     print("="*50)
 
     print("\nTest Set Classification Report:")
