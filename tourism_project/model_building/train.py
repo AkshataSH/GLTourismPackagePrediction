@@ -46,24 +46,26 @@ y_test = pd.read_csv(ytest_path).values.ravel()
 print(f"Training set shape: {X_train.shape}")
 print(f"Test set shape: {X_test.shape}")
 
-# Identify numeric features (all features after encoding)
-numeric_features = X_train.columns.tolist()
+# Automatically detect columns
+numeric_features = X_train.select_dtypes(include=["int64", "float64"]).columns.tolist()
+categorical_features = X_train.select_dtypes(include=["object"]).columns.tolist()
 
-# Preprocessor - StandardScaler for all numeric features
+print("Numeric features:", numeric_features)
+print("Categorical features:", categorical_features)
+
 preprocessor = make_column_transformer(
-    (StandardScaler(), numeric_features)
+    (StandardScaler(), numeric_features),
+    (OneHotEncoder(handle_unknown="ignore"), categorical_features)
 )
 
 # Define XGBoost Regressor
-xgb_model = xgb.XGBClassifier(  random_state=42,
-    n_jobs=-1,
-    eval_metric='logloss',
-    use_label_encoder=False)
+xgb_model = xgb.XGBClassifier(random_state=42,
+    eval_metric='logloss')
 
 # Define hyperparameter grid
 param_grid = {
-     'xgbclassifier__n_estimators': [100, 200, 300],
-    'xgbclassifier__max_depth': [3, 5, 7],
+    'xgbclassifier__n_estimators': [100, 200, 300],
+    'xgbclassifier__max_depth': [2, 3, 5, 7],
     'xgbclassifier__learning_rate': [0.01, 0.05, 0.1],
     'xgbclassifier__subsample': [0.7, 0.8, 1.0],
     'xgbclassifier__colsample_bytree': [0.7, 0.8, 1.0],
