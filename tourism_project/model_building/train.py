@@ -27,7 +27,7 @@ from huggingface_hub.utils import RepositoryNotFoundError
 import mlflow
 # Set up MLflow tracking
 mlflow.set_tracking_uri("http://localhost:5000")
-mlflow.set_experiment("MLOps_CICD_experiment")
+mlflow.set_experiment("ash-tourism-package-prediction")
 repo_id = "akshatash/TourismPkgPrediction"
 api = HfApi()
 
