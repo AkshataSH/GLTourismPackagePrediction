@@ -75,7 +75,7 @@ param_grid = {
 # Create pipeline
 model_pipeline = make_pipeline(preprocessor, xgb_model)
 
-mlflow.set_experiment("tourism_package_prediction")
+mlflow.set_experiment("ash-tourism-package-prediction")
 with mlflow.start_run():
     print("Performing Grid Search with Cross-Validation...")
     grid_search = GridSearchCV(
