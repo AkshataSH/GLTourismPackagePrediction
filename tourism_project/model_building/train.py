@@ -43,11 +43,11 @@ Xtest = pd.read_csv(Xtest_path)
 ytrain = pd.read_csv(ytrain_path).values.ravel()
 ytest = pd.read_csv(ytest_path).values.ravel()
 
-print(f"Training set shape: {Xtrain.shape}")
-print(f"Test set shape: {Xtest.shape}")
+print(f"Training set shape: {X_train.shape}")
+print(f"Test set shape: {X_test.shape}")
 
 # Identify numeric features (all features after encoding)
-numeric_features = Xtrain.columns.tolist()
+numeric_features = X_train.columns.tolist()
 
 # Preprocessor - StandardScaler for all numeric features
 preprocessor = make_column_transformer(
@@ -73,26 +73,25 @@ param_grid = {
 # Create pipeline
 model_pipeline = make_pipeline(preprocessor, xgb_model)
 
-
 mlflow.set_experiment("tourism_package_prediction")
-   with mlflow.start_run(run_name=model_name):
-        print("Performing Grid Search with Cross-Validation...")
-        grid_search = GridSearchCV(
+with mlflow.start_run():
+    print("Performing Grid Search with Cross-Validation...")
+    grid_search = GridSearchCV(
         model_pipeline, 
         param_grid, 
         cv=3, 
         n_jobs=-1, 
         scoring='roc_auc',
         verbose=1
-        )
+    )
+    
+    grid_search.fit(X_train, y_train)
 
-        grid_search.fit(Xtrain, ytrain)
+    # Log parameter sets
+    results = grid_search.cv_results_
+    print(f"\nEvaluated {len(results['params'])} parameter combinations")
 
-         # Log parameter sets
-        results = grid_search.cv_results_
-        print(f"\nEvaluated {len(results['params'])} parameter combinations")
-
-        for i in range(len(results['params'])):
+    for i in range(len(results['params'])):
         param_set = results['params'][i]
         mean_score = results['mean_test_score'][i]
 
@@ -107,29 +106,29 @@ mlflow.set_experiment("tourism_package_prediction")
 
     # Predictions
     print("\nMaking predictions...")
-    y_pred_train = best_model.predict(Xtrain)
-    y_pred_test = best_model.predict(Xtest)
-
+    y_pred_train = best_model.predict(X_train)
+    y_pred_test = best_model.predict(X_test)
+    
     # Probability predictions
-    y_pred_train_proba = best_model.predict_proba(Xtrain)[:, 1]
-    y_pred_test_proba = best_model.predict_proba(Xtest)[:, 1]
+    y_pred_train_proba = best_model.predict_proba(X_train)[:, 1]
+    y_pred_test_proba = best_model.predict_proba(X_test)[:, 1]
 
     # Calculate metrics
     print("\nCalculating metrics...")
-    train_accuracy = accuracy_score(ytrain, y_pred_train)
-    test_accuracy = accuracy_score(ytest, y_pred_test)
+    train_accuracy = accuracy_score(y_train, y_pred_train)
+    test_accuracy = accuracy_score(y_test, y_pred_test)
 
-    train_precision = precision_score(ytrain, y_pred_train, zero_division=0)
-    test_precision = precision_score(ytest, y_pred_test, zero_division=0)
+    train_precision = precision_score(y_train, y_pred_train, zero_division=0)
+    test_precision = precision_score(y_test, y_pred_test, zero_division=0)
 
-    train_recall = recall_score(ytrain, y_pred_train, zero_division=0)
-    test_recall = recall_score(ytest, y_pred_test, zero_division=0)
+    train_recall = recall_score(y_train, y_pred_train, zero_division=0)
+    test_recall = recall_score(y_test, y_pred_test, zero_division=0)
 
-    train_f1 = f1_score(ytrain, y_pred_train, zero_division=0)
-    test_f1 = f1_score(ytest, y_pred_test, zero_division=0)
+    train_f1 = f1_score(y_train, y_pred_train, zero_division=0)
+    test_f1 = f1_score(y_test, y_pred_test, zero_division=0)
 
-    train_roc_auc = roc_auc_score(ytrain, y_pred_train_proba)
-    test_roc_auc = roc_auc_score(ytest, y_pred_test_proba)
+    train_roc_auc = roc_auc_score(y_train, y_pred_train_proba)
+    test_roc_auc = roc_auc_score(y_test, y_pred_test_proba)
 
     # Log metrics
     mlflow.log_metrics({
@@ -157,13 +156,10 @@ mlflow.set_experiment("tourism_package_prediction")
     print("="*50)
 
     print("\nTest Set Classification Report:")
-    print(classification_report(ytest, y_pred_test, target_names=['No Purchase', 'Purchase']))
+    print(classification_report(y_test, y_pred_test, target_names=['No Purchase', 'Purchase']))
 
     print("\nTest Set Confusion Matrix:")
-    print(confusion_matrix(ytest, y_pred_test))
-
-    # Save the model locally
-    model_path = "best_tourism_model_v1.joblib"
+    print(confusion_matrix(y_test, y_pred_test))
     joblib.dump(best_model, model_path)
     print(f"\nModel saved locally as: {model_path}")
 
